@@ -9,6 +9,19 @@ key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2
 supabase: Client = create_client(url, key)
 
 # Load data
+# @st.cache_data
+# def load_data():
+#     anime_data = supabase.table("anime-filtered").select("*").execute().data
+#     rating_data = supabase.table("final_animedataset").select("*").execute().data
+#     user_data = supabase.table("eda-score-2023").select("*").execute().data
+
+#     anime = pd.DataFrame(anime_data)
+#     rating = pd.DataFrame(rating_data)
+#     user = pd.DataFrame(user_data)
+
+#     merged = rating.merge(anime, on="anime_id").merge(user, on="user_id")
+#     return anime, rating, user, merged
+
 @st.cache_data
 def load_data():
     anime_data = supabase.table("anime-filtered").select("*").execute().data
@@ -19,8 +32,35 @@ def load_data():
     rating = pd.DataFrame(rating_data)
     user = pd.DataFrame(user_data)
 
+    st.write("📄 `anime` columns:", anime.columns.tolist())
+    st.write("📄 `rating` columns:", rating.columns.tolist())
+    st.write("📄 `user` columns:", user.columns.tolist())
+
+    # Optional: Preview rows
+    st.write("Preview anime data:", anime.head())
+    st.write("Preview rating data:", rating.head())
+    st.write("Preview user data:", user.head())
+
+    # Ensure required columns exist
+    required_columns = {
+        "anime": "anime_id",
+        "rating": ["anime_id", "user_id"],
+        "user": "user_id"
+    }
+
+    if required_columns["anime"] not in anime.columns:
+        st.error("❌ Column `anime_id` missing in anime table.")
+        st.stop()
+    if any(col not in rating.columns for col in required_columns["rating"]):
+        st.error("❌ One of `anime_id` or `user_id` missing in rating table.")
+        st.stop()
+    if required_columns["user"] not in user.columns:
+        st.error("❌ Column `user_id` missing in user table.")
+        st.stop()
+
     merged = rating.merge(anime, on="anime_id").merge(user, on="user_id")
     return anime, rating, user, merged
+# ------------------------------------------------
 
 anime, rating, user, merged_df = load_data()
 
