@@ -4,24 +4,12 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from supabase import create_client, Client
 
+# Supabase credentials
 url = "https://yvspjnxnwdanqwymcwtw.supabase.co"
 key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2c3Bqbnhud2RhbnF3eW1jd3R3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0NzIwMTIsImV4cCI6MjA2MTA0ODAxMn0.iVIH5OwBDXHM9yJGnQhxn7zkuFEmmQsZwGIKJiu3MRo"
 supabase: Client = create_client(url, key)
 
-# Load data
-# @st.cache_data
-# def load_data():
-#     anime_data = supabase.table("anime-filtered").select("*").execute().data
-#     rating_data = supabase.table("final_animedataset").select("*").execute().data
-#     user_data = supabase.table("eda-score-2023").select("*").execute().data
-
-#     anime = pd.DataFrame(anime_data)
-#     rating = pd.DataFrame(rating_data)
-#     user = pd.DataFrame(user_data)
-
-#     merged = rating.merge(anime, on="anime_id").merge(user, on="user_id")
-#     return anime, rating, user, merged
-
+# Load and prepare data
 @st.cache_data
 def load_data():
     anime_data = supabase.table("anime-filtered").select("*").execute().data
@@ -32,41 +20,31 @@ def load_data():
     rating = pd.DataFrame(rating_data)
     user = pd.DataFrame(user_data)
 
-    st.write("📄 `anime` columns:", anime.columns.tolist())
-    st.write("📄 `rating` columns:", rating.columns.tolist())
-    st.write("📄 `user` columns:", user.columns.tolist())
+    # Rename columns if needed
+    for col in ["id", "animeId", "AnimeID"]:
+        if col in anime.columns:
+            anime.rename(columns={col: "anime_id"}, inplace=True)
+            break
 
-    # Optional: Preview rows
-    st.write("Preview anime data:", anime.head())
-    st.write("Preview rating data:", rating.head())
-    st.write("Preview user data:", user.head())
+    for col in ["id", "userId", "UserID"]:
+        if col in user.columns:
+            user.rename(columns={col: "user_id"}, inplace=True)
+            break
 
-    # Ensure required columns exist
-    required_columns = {
-        "anime": "anime_id",
-        "rating": ["anime_id", "user_id"],
-        "user": "user_id"
-    }
+    if "anime_id" not in anime.columns:
+        raise KeyError("❌ Column `anime_id` missing in anime table.")
 
-    if required_columns["anime"] not in anime.columns:
-        st.error("❌ Column `anime_id` missing in anime table.")
-        st.stop()
-    if any(col not in rating.columns for col in required_columns["rating"]):
-        st.error("❌ One of `anime_id` or `user_id` missing in rating table.")
-        st.stop()
-    if required_columns["user"] not in user.columns:
-        st.error("❌ Column `user_id` missing in user table.")
-        st.stop()
+    if "user_id" not in user.columns:
+        raise KeyError("❌ Column `user_id` missing in user table.")
 
     merged = rating.merge(anime, on="anime_id").merge(user, on="user_id")
     return anime, rating, user, merged
-# ------------------------------------------------
 
+# Load everything
 anime, rating, user, merged_df = load_data()
 
+# Streamlit UI
 st.title("Anime Recommendation & Analytics App")
-
-# Tabs for navigation
 tab1, tab2 = st.tabs(["🔍 Recommend", "📊 Visualize"])
 
 with tab1:
@@ -77,15 +55,17 @@ with tab1:
 
     st.write("⚠️ You can plug in your actual model here to generate recommendations.")
     
-    # TEMP: dummy recommendations
     user_history = merged_df[merged_df["user_id"] == user_id]
     already_seen = set(user_history["anime_id"])
     unseen_anime = anime[~anime["anime_id"].isin(already_seen)]
-    recs = unseen_anime.sample(top_n)
+    recs = unseen_anime.sample(top_n) if not unseen_anime.empty else pd.DataFrame()
 
     st.subheader("Recommended Anime")
-    for _, row in recs.iterrows():
-        st.markdown(f"**{row['name']}** - {row['genre']}")
+    if recs.empty:
+        st.warning("No unseen anime to recommend.")
+    else:
+        for _, row in recs.iterrows():
+            st.markdown(f"**{row.get('name', 'Unknown')}** - {row.get('genre', 'N/A')}")
 
 with tab2:
     st.header("Visualize Anime Ratings")
