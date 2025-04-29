@@ -4,12 +4,11 @@ import seaborn as sns
 import matplotlib.pyplot as plt
 from supabase import create_client, Client
 
-# Supabase credentials
 url = "https://yvspjnxnwdanqwymcwtw.supabase.co"
 key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2c3Bqbnhud2RhbnF3eW1jd3R3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0NzIwMTIsImV4cCI6MjA2MTA0ODAxMn0.iVIH5OwBDXHM9yJGnQhxn7zkuFEmmQsZwGIKJiu3MRo"
 supabase: Client = create_client(url, key)
 
-# Load and prepare data
+Load data
 @st.cache_data
 def load_data():
     anime_data = supabase.table("anime-filtered").select("*").execute().data
@@ -20,31 +19,16 @@ def load_data():
     rating = pd.DataFrame(rating_data)
     user = pd.DataFrame(user_data)
 
-    # Rename columns if needed
-    for col in ["id", "animeId", "AnimeID"]:
-        if col in anime.columns:
-            anime.rename(columns={col: "anime_id"}, inplace=True)
-            break
-
-    for col in ["id", "userId", "UserID"]:
-        if col in user.columns:
-            user.rename(columns={col: "user_id"}, inplace=True)
-            break
-
-    if "anime_id" not in anime.columns:
-        raise KeyError("❌ Column `anime_id` missing in anime table.")
-
-    if "user_id" not in user.columns:
-        raise KeyError("❌ Column `user_id` missing in user table.")
-
     merged = rating.merge(anime, on="anime_id").merge(user, on="user_id")
     return anime, rating, user, merged
 
-# Load everything
+# ------------------------------------------------
+
 anime, rating, user, merged_df = load_data()
 
-# Streamlit UI
 st.title("Anime Recommendation & Analytics App")
+
+# Tabs for navigation
 tab1, tab2 = st.tabs(["🔍 Recommend", "📊 Visualize"])
 
 with tab1:
@@ -55,17 +39,15 @@ with tab1:
 
     st.write("⚠️ You can plug in your actual model here to generate recommendations.")
     
+    # TEMP: dummy recommendations
     user_history = merged_df[merged_df["user_id"] == user_id]
     already_seen = set(user_history["anime_id"])
     unseen_anime = anime[~anime["anime_id"].isin(already_seen)]
-    recs = unseen_anime.sample(top_n) if not unseen_anime.empty else pd.DataFrame()
+    recs = unseen_anime.sample(top_n)
 
     st.subheader("Recommended Anime")
-    if recs.empty:
-        st.warning("No unseen anime to recommend.")
-    else:
-        for _, row in recs.iterrows():
-            st.markdown(f"**{row.get('name', 'Unknown')}** - {row.get('genre', 'N/A')}")
+    for _, row in recs.iterrows():
+        st.markdown(f"**{row['name']}** - {row['genre']}")
 
 with tab2:
     st.header("Visualize Anime Ratings")
