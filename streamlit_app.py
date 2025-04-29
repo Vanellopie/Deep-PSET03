@@ -11,9 +11,14 @@ supabase: Client = create_client(url, key)
 # Load data
 @st.cache_data
 def load_data():
-    anime = pd.read_csv("data/anime-filtered.csv")
-    rating = pd.read_csv("data/final_animedataset.csv")
-    user = pd.read_csv("data/users-score-2023.csv")
+    anime_data = supabase.table("anime").select("*").execute().data
+    rating_data = supabase.table("final_animedataset").select("*").execute().data
+    user_data = supabase.table("users_score_2023").select("*").execute().data
+
+    anime = pd.DataFrame(anime_data)
+    rating = pd.DataFrame(rating_data)
+    user = pd.DataFrame(user_data)
+
     merged = rating.merge(anime, on="anime_id").merge(user, on="user_id")
     return anime, rating, user, merged
 
