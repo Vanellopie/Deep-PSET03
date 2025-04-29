@@ -47,7 +47,7 @@ def load_data():
         st.error("❌ 'anime_id' column not found in `anime` DataFrame!")
         st.stop()
 
-    merged = rating.merge(anime, on="anime_id").merge(user, on="user_id")
+    merged = rating.merge(anime-filtered, on="anime_id").merge(user, on="user_id")
     return anime, rating, user, merged
 
 
