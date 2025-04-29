@@ -32,15 +32,6 @@ def load_data():
     rating = pd.DataFrame(rating_data)
     user = pd.DataFrame(user_data)
 
-    # Optional: rename for convenience
-    anime.rename(columns={
-        "Name": "name",
-        "Score": "score",
-        "Genres": "genre",
-        "English name": "english_name",
-        "Japanese name": "japanese_name"
-    }, inplace=True)
-
     st.write("Anime columns:", anime.columns.tolist())
 
     if "anime_id" not in anime.columns:
