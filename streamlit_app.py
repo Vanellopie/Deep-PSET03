@@ -2,6 +2,11 @@ import streamlit as st
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
+from supabase import create_client, Client
+
+url = "https://yvspjnxnwdanqwymcwtw.supabase.co"
+key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2c3Bqbnhud2RhbnF3eW1jd3R3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0NzIwMTIsImV4cCI6MjA2MTA0ODAxMn0.iVIH5OwBDXHM9yJGnQhxn7zkuFEmmQsZwGIKJiu3MRo"
+supabase: Client = create_client(url, key)
 
 # Load data
 @st.cache_data
