@@ -24,7 +24,7 @@ supabase: Client = create_client(url, key)
 
 @st.cache_data
 def load_data():
-    anime_data = supabase.table("anime-filtered").select("anime_id, name, Score, Genres, English name, Japanese name").execute().data
+    anime_data = supabase.table("anime-filtered").select('anime_id, "Name", "Score", "Genres", "English name", "Japanese name"').execute().data
     rating_data = supabase.table("final_animedataset").select("*").execute().data
     user_data = supabase.table("eda-score-2023").select("*").execute().data
 
@@ -32,9 +32,16 @@ def load_data():
     rating = pd.DataFrame(rating_data)
     user = pd.DataFrame(user_data)
 
+    # Optional: rename for convenience
+    anime.rename(columns={
+        "Name": "name",
+        "Score": "score",
+        "Genres": "genre",
+        "English name": "english_name",
+        "Japanese name": "japanese_name"
+    }, inplace=True)
+
     st.write("Anime columns:", anime.columns.tolist())
-    st.write("Rating columns:", rating.columns.tolist())
-    st.write("User columns:", user.columns.tolist())
 
     if "anime_id" not in anime.columns:
         st.error("❌ 'anime_id' column not found in `anime` DataFrame!")
@@ -42,6 +49,7 @@ def load_data():
 
     merged = rating.merge(anime, on="anime_id").merge(user, on="user_id")
     return anime, rating, user, merged
+
 
 
 # ------------------------------------------------
