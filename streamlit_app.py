@@ -24,7 +24,7 @@ supabase: Client = create_client(url, key)
 
 @st.cache_data
 def load_data():
-    anime_data = supabase.table("anime-filtered").select('anime_id, "Name", "Score", "Genres", "English name", "Japanese name"').execute().data
+    anime_data = supabase.table("anime-filtered").select("*").execute().data
     rating_data = supabase.table("final_animedataset").select("*").execute().data
     user_data = supabase.table("eda-score-2023").select("*").execute().data
 
