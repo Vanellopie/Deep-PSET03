@@ -13,7 +13,7 @@ supabase: Client = create_client(url, key)
 def load_data():
     anime_data = supabase.table("anime-filtered").select("*").execute().data
     rating_data = supabase.table("final_animedataset").select("*").execute().data
-    user_data = supabase.table("users_score_2023").select("*").execute().data
+    user_data = supabase.table("eda-score-2023").select("*").execute().data
 
     anime = pd.DataFrame(anime_data)
     rating = pd.DataFrame(rating_data)
