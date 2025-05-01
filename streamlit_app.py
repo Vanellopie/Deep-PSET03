@@ -33,7 +33,7 @@ tab1, tab2 = st.tabs(["🔍 Recommend", "📊 Visualize"])
 
 with tab1:
     st.header("Anime Recommender")
-
+    print("unique user ids", merged_df["user_id"].unique())
     user_id = st.selectbox("Select User ID", merged_df["user_id"].unique())
     top_n = st.slider("Number of Recommendations", 1, 10, 5)
 
