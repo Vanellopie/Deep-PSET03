@@ -34,7 +34,8 @@ tab1, tab2 = st.tabs(["🔍 Recommend", "📊 Visualize"])
 with tab1:
     st.header("Anime Recommender")
     print("unique user ids", merged_df["user_id"].unique())
-    user_id = st.selectbox("Select User ID", merged_df["user_id"].unique())
+    # user_id = st.selectbox("Select User ID", merged_df["user_id"].unique())
+    user_id = 1897606
     top_n = st.slider("Number of Recommendations", 1, 10, 5)
 
     st.write("⚠️ You can plug in your actual model here to generate recommendations.")
