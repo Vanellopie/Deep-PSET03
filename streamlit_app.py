@@ -1,105 +1,92 @@
 import streamlit as st
 import pandas as pd
-import seaborn as sns
 import matplotlib.pyplot as plt
-from supabase import create_client, Client
+import seaborn as sns
 
-url = "https://yvspjnxnwdanqwymcwtw.supabase.co"
-key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inl2c3Bqbnhud2RhbnF3eW1jd3R3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDU0NzIwMTIsImV4cCI6MjA2MTA0ODAxMn0.iVIH5OwBDXHM9yJGnQhxn7zkuFEmmQsZwGIKJiu3MRo"
-supabase: Client = create_client(url, key)
+st.set_page_config(layout="wide")
 
-# Load data
 @st.cache_data
 def load_data():
-    anime_data = supabase.table("anime-filtered").select("*").execute().data
-    rating_data = supabase.table("final_animedataset").select("*").execute().data
-    user_data = supabase.table("eda-score-2023").select("*").execute().data
+    df = pd.read_csv("data/anime-filtered.csv")
+    return df
 
-    anime = pd.DataFrame(anime_data)
-    rating = pd.DataFrame(rating_data)
-    user = pd.DataFrame(user_data)
+anime_df = load_data()
 
-    merged = rating.merge(anime, on="anime_id").merge(user, on="user_id")
-    return anime, rating, user, merged
+st.title("🎌 Anime Explorer & Visual Analytics")
 
-# ------------------------------------------------
+# Create two tabs
+tab1, tab2 = st.tabs(["🔎 Anime Search", "📊 Visualizations"])
 
-anime, rating, user, merged_df = load_data()
+# --------------------- TAB 1: Anime Search ---------------------
+# Search inputs
+col1, col2 = st.columns([2, 1])
 
-st.title("Anime Recommendation & Analytics App")
+with col1:
+    search_name = st.text_input("Search Anime by Name")
 
-# Tabs for navigation
-tab1, tab2 = st.tabs(["🔍 Recommend", "📊 Visualize"])
+with col2:
+    selected_score = st.slider("Filter by Score", 1, 10, 0)
 
-with tab1:
-    st.header("Anime Recommender")
-    print("unique user ids", merged_df["user_id"].unique())
-    # user_id = st.selectbox("Select User ID", merged_df["user_id"].unique())
-    user_id = 1897606
-    top_n = st.slider("Number of Recommendations", 1, 10, 5)
+# Filter logic
+if search_name:
+    result_df = anime_df[anime_df["Name"].str.contains(search_name, case=False, na=False)]
+elif selected_score > 0:
+    result_df = anime_df[anime_df["Score"].round(0) == selected_score]
+else:
+    result_df = pd.DataFrame()
 
-    st.write("⚠️ You can plug in your actual model here to generate recommendations.")
-    
-    # TEMP: dummy recommendations
-    user_history = merged_df[merged_df["user_id"] == user_id]
-    already_seen = set(user_history["anime_id"])
-    unseen_anime = anime[~anime["anime_id"].isin(already_seen)]
-    recs = unseen_anime.sample(top_n)
+# Display results
+if not result_df.empty:
+    for _, row in result_df.iterrows():
+        st.markdown("---")
+        st.markdown(f"### {row['Name']}")
+        st.markdown(f"*{row.get('English name', '')}, {row.get('Japanese name', '')}*")
 
-    st.subheader("Recommended Anime")
-    for _, row in recs.iterrows():
-        st.markdown(f"**{row['name']}** - {row['genre']}")
+        st.markdown(f"<div style='color:gray'>{row.get('sypnopsis', 'No synopsis available.')}</div>", unsafe_allow_html=True)
 
+        col1, col2 = st.columns([2, 2])
+        with col1:
+            st.markdown(f"**Type**: {row.get('Type', 'N/A')}")
+            st.markdown(f"**Studios**: {row.get('Studios', 'N/A')}")
+            st.markdown(f"**Date Aired**: {row.get('Aired', 'N/A')}")
+            st.markdown(f"**Status**: {'Finished Airing' if row.get('Completed', 0) > 0 else 'Ongoing'}")
+            st.markdown(f"**Genre**: {row.get('Genres', 'N/A')}")
+        with col2:
+            st.markdown(f"**Score**: {row.get('Score', 'N/A')}")
+            st.markdown(f"**Premiered**: {row.get('Premiered', 'N/A')}")
+            st.markdown(f"**Duration**: {row.get('Duration', 'N/A')}")
+            st.markdown(f"**Quality**: HD")
+            st.markdown(f"**Views**: {int(row.get('Members', 0)):,}")
+else:
+    st.info("Enter an anime name or choose a score to begin.")
+
+
+
+# --------------------- TAB 2: Visualizations ---------------------
 with tab2:
-    st.header("Visualize Anime Ratings")
+    st.header("Anime Dataset Visualizations")
+    
+    st.subheader("Score Distribution")
+    fig, ax = plt.subplots(figsize=(10, 4))
+    sns.histplot(anime_df["Score"].dropna(), bins=20, kde=True, ax=ax, color="skyblue")
+    ax.set_xlabel("Score")
+    ax.set_ylabel("Count")
+    st.pyplot(fig)
 
-    viz_choice = st.selectbox("Choose a Visualization", [
-        "Rating Distribution by Gender",
-        "Top 5 Most Popular Anime by Gender",
-        "Average Score by Source",
-        "Rating vs. Popularity",
-        "User Rating Consistency"
-    ])
+    st.subheader("Top 10 Genres")
+    genre_series = anime_df["Genres"].dropna().str.split(', ').explode()
+    top_genres = genre_series.value_counts().head(10)
+    fig2, ax2 = plt.subplots(figsize=(10, 4))
+    sns.barplot(x=top_genres.values, y=top_genres.index, palette="viridis", ax=ax2)
+    ax2.set_xlabel("Number of Anime")
+    ax2.set_ylabel("Genre")
+    st.pyplot(fig2)
 
-    if viz_choice == "Rating Distribution by Gender":
-        fig = plt.figure()
-        sns.histplot(data=merged_df, x="score", hue="gender", multiple="stack", bins=10)
-        plt.title("Rating Distribution by Gender")
-        st.pyplot(fig)
-
-    elif viz_choice == "Top 5 Most Popular Anime by Gender":
-        fig = plt.figure()
-        top_anime_by_gender = merged_df.groupby(['gender', 'name'])['score'].count().reset_index()
-        top_anime_by_gender = top_anime_by_gender.sort_values(['gender', 'score'], ascending=False)
-        genders = top_anime_by_gender['gender'].unique()
-        for g in genders:
-            subset = top_anime_by_gender[top_anime_by_gender['gender'] == g].head(5)
-            sns.barplot(data=subset, y="name", x="score")
-            plt.title(f"Top 5 Most Rated Anime - {g}")
-            st.pyplot(plt.gcf())
-            plt.clf()
-
-    elif viz_choice == "Average Score by Source":
-        fig = plt.figure()
-        source_scores = merged_df.groupby("source")["score"].mean().sort_values(ascending=False)
-        sns.barplot(x=source_scores.values, y=source_scores.index)
-        plt.title("Average Rating by Anime Source")
-        st.pyplot(fig)
-
-    elif viz_choice == "Rating vs. Popularity":
-        fig = plt.figure()
-        anime_stats = merged_df.groupby("anime_id").agg({
-            "score": "mean",
-            "user_id": "count"
-        }).rename(columns={"score": "avg_score", "user_id": "num_ratings"})
-        sns.scatterplot(data=anime_stats, x="num_ratings", y="avg_score")
-        plt.title("Rating vs. Popularity")
-        plt.xscale("log")
-        st.pyplot(fig)
-
-    elif viz_choice == "User Rating Consistency":
-        fig = plt.figure()
-        user_consistency = merged_df.groupby("user_id")["score"].std().dropna()
-        sns.histplot(user_consistency, bins=30)
-        plt.title("User Rating Consistency (Std Dev of Scores)")
-        st.pyplot(fig)
+    st.subheader("Top Studios by Anime Count")
+    studios = anime_df["Studios"].dropna().str.split(', ').explode()
+    top_studios = studios.value_counts().head(10)
+    fig3, ax3 = plt.subplots(figsize=(10, 4))
+    sns.barplot(x=top_studios.values, y=top_studios.index, palette="magma", ax=ax3)
+    ax3.set_xlabel("Number of Anime")
+    ax3.set_ylabel("Studio")
+    st.pyplot(fig3)
